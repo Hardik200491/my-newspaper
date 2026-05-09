@@ -30,7 +30,7 @@
 </div>
 
 <script>
-    // Replace with your actual Google Sheet CSV export URL
+    // Sahi CSV URL (Publish to web se milega)
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQa12pOnv9VIWuTRHSzhRz168jazStm7iMTc0Rk8-Zt2d0P3D-eoHCphcfRnzbRJWeRDGj23O4w6m1u/pub?output=csv";
 
     let availableEditions = [];
@@ -39,10 +39,13 @@
         try {
             const response = await fetch(sheetURL);
             const data = await response.text();
+            // CSV ki lines ko list mein badalna
             availableEditions = data.split('\n').map(d => d.trim()).filter(d => d !== "");
+            console.log("Loaded Dates:", availableEditions);
             initPage();
         } catch (error) {
             console.error("Dates load nahi ho payi:", error);
+            // Fallback dates agar sheet kaam na kare
             availableEditions = ["2026-05-06", "2026-04-29"];
             initPage();
         }
@@ -55,23 +58,42 @@
         loadPDF();
     }
 
-    function getTargetWednesday(date) {
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 3);
-        const wednesday = new Date(date.setDate(diff));
-        return wednesday.toISOString().split('T')[0];
+    function getTargetWednesday(inputDate) {
+        let d = new Date(inputDate);
+        let day = d.getDay(); // 0:Sun, 3:Wed
+        let diff = day - 3;
+        if (diff < 0) diff += 7;
+        d.setDate(d.getDate() - diff);
+        
+        // Local Format (YYYY-MM-DD)
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
     }
 
     function loadPDF() {
-        const selectedDate = document.getElementById('newsDate').value;
-        if (!selectedDate) {
-            document.getElementById('viewer').innerHTML = '<p style="color: #666;">Kripya ek date select karein.</p>';
-            return;
+        const dateInput = document.getElementById('newsDate').value;
+        const viewer = document.getElementById('viewer');
+        
+        // Step 1: Wednesday calculate karein
+        const wedDate = getTargetWednesday(dateInput);
+        
+        // Step 2: Check karein ki date available hai ya nahi
+        if (availableEditions.includes(wedDate)) {
+            const pdfPath = `pdfs/${wedDate}.pdf`;
+            viewer.innerHTML = `
+                <p style="background:#e7f3ff; padding:10px; border-radius:5px;">
+                    Showing: <strong>${wedDate} (Wednesday) Edition</strong>
+                </p>
+                <iframe src="${pdfPath}" width="100%" height="800px"></iframe>`;
+        } else {
+            viewer.innerHTML = `
+                <div style="padding:20px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px;">
+                    <h3>Edtion Uplabd Nahi Hai</h3>
+                    <p>${wedDate} ka newspaper abhi upload nahi kiya gaya hai.</p>
+                </div>`;
         }
-
-        // Replace with your PDF storage path/URL
-        const pdfPath = `pdfs/${selectedDate}.pdf`;
-        document.getElementById('viewer').innerHTML = `<iframe src="${pdfPath}" type="application/pdf"></iframe>`;
     }
 
     window.onload = fetchDates;
