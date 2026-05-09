@@ -14,7 +14,7 @@
 <body>
 
 <div class="nav">
-    <a href="home.html">Home</a> | <strong>Newspaper</strong>
+    <a href="Home.html">Home</a> | <strong>Newspaper</strong>
 </div>
 
 <h1>Newspaper Archive</h1>
@@ -30,9 +30,8 @@
 </div>
 
 <script>
-    // Google Sheet (CSV format) ka URL yahan aayega
-    // Is sheet mein sirf ek column hoga jisme dates likhi hongi
-    const sheetURL = "APNI_GOOGLE_SHEET_CSV_URL_YAHAN_DALEIN";
+    // Replace with your actual Google Sheet CSV export URL
+    const sheetURL = "YOUR_GOOGLE_SHEET_CSV_URL_HERE";
 
     let availableEditions = [];
 
@@ -40,14 +39,10 @@
         try {
             const response = await fetch(sheetURL);
             const data = await response.text();
-            // CSV se dates nikaalna
             availableEditions = data.split('\n').map(d => d.trim()).filter(d => d !== "");
-            
-            // Dates load hone ke baad default load karna
             initPage();
         } catch (error) {
             console.error("Dates load nahi ho payi:", error);
-            // Fallback: Agar sheet load na ho toh purani manual dates
             availableEditions = ["2026-05-06", "2026-04-29"];
             initPage();
         }
@@ -60,8 +55,24 @@
         loadPDF();
     }
 
-    // Baaki ke functions (getTargetWednesday, loadPDF) wahi rahenge jo pehle the
-    // ... (Purana logic copy karein) ...
+    function getTargetWednesday(date) {
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 3);
+        const wednesday = new Date(date.setDate(diff));
+        return wednesday.toISOString().split('T')[0];
+    }
+
+    function loadPDF() {
+        const selectedDate = document.getElementById('newsDate').value;
+        if (!selectedDate) {
+            document.getElementById('viewer').innerHTML = '<p style="color: #666;">Kripya ek date select karein.</p>';
+            return;
+        }
+
+        // Replace with your PDF storage path/URL
+        const pdfPath = `pdfs/${selectedDate}.pdf`;
+        document.getElementById('viewer').innerHTML = `<iframe src="${pdfPath}" type="application/pdf"></iframe>`;
+    }
 
     window.onload = fetchDates;
 </script>
