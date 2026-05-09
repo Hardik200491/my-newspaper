@@ -30,23 +30,29 @@
 </div>
 
 <script>
-    // Sahi CSV URL (Publish to web se milega)
+    // Aapka Published CSV Link
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQa12pOnv9VIWuTRHSzhRz168jazStm7iMTc0Rk8-Zt2d0P3D-eoHCphcfRnzbRJWeRDGj23O4w6m1u/pub?output=csv";
 
     let availableEditions = [];
 
+    // Google Sheet se dates load karne ka function
     async function fetchDates() {
         try {
+            console.log("Fetching dates from Google Sheet...");
             const response = await fetch(sheetURL);
             const data = await response.text();
-            // CSV ki lines ko list mein badalna
-            availableEditions = data.split('\n').map(d => d.trim()).filter(d => d !== "");
-            console.log("Loaded Dates:", availableEditions);
+            
+            // CSV lines ko array mein convert karna (Empty lines aur spaces saaf karke)
+            availableEditions = data.split(/\r?\n/)
+                                    .map(d => d.trim())
+                                    .filter(d => d !== "" && d.toLowerCase() !== "date"); // "Date" header ko hatane ke liye
+            
+            console.log("Success! Available Editions:", availableEditions);
             initPage();
         } catch (error) {
-            console.error("Dates load nahi ho payi:", error);
-            // Fallback dates agar sheet kaam na kare
-            availableEditions = ["2026-05-06", "2026-04-29"];
+            console.error("Sheet load nahi ho payi:", error);
+            // Fallback dates agar sheet fail ho jaye (Testing ke liye)
+            availableEditions = ["2026-05-06", "2026-04-29"]; 
             initPage();
         }
     }
@@ -60,12 +66,11 @@
 
     function getTargetWednesday(inputDate) {
         let d = new Date(inputDate);
-        let day = d.getDay(); // 0:Sun, 3:Wed
+        let day = d.getDay(); 
         let diff = day - 3;
         if (diff < 0) diff += 7;
         d.setDate(d.getDate() - diff);
         
-        // Local Format (YYYY-MM-DD)
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -75,25 +80,36 @@
     function loadPDF() {
         const dateInput = document.getElementById('newsDate').value;
         const viewer = document.getElementById('viewer');
+        if (!dateInput) return;
+
+        const targetWed = getTargetWednesday(dateInput);
         
-        // Step 1: Wednesday calculate karein
-        const wedDate = getTargetWednesday(dateInput);
-        
-        // Step 2: Check karein ki date available hai ya nahi
-        if (availableEditions.includes(wedDate)) {
-            const pdfPath = `pdfs/${wedDate}.pdf`;
+        // CHECK: Kya selected Wednesday hamari list mein hai?
+        if (availableEditions.includes(targetWed)) {
+            const pdfPath = `pdfs/${targetWed}.pdf`;
             viewer.innerHTML = `
-                <p style="background:#e7f3ff; padding:10px; border-radius:5px;">
-                    Showing: <strong>${wedDate} (Wednesday) Edition</strong>
-                </p>
-                <iframe src="${pdfPath}" width="100%" height="800px"></iframe>`;
+                <div style="margin: 10px 0; color: #155724; background: #d4edda; padding: 10px; border-radius: 5px; border: 1px solid #c3e6cb; font-size: 14px;">
+                    ✔ Edition Found: <strong>${targetWed}</strong> (Wednesday)
+                </div>
+                <iframe src="${pdfPath}" width="100%" height="800px" style="border:1px solid #ccc;"></iframe>`;
         } else {
+            // Agar file nahi milti toh 404 ki jagah ye msg aayega
             viewer.innerHTML = `
-                <div style="padding:20px; background:#fff3cd; border:1px solid #ffeeba; border-radius:8px;">
-                    <h3>Edtion Uplabd Nahi Hai</h3>
-                    <p>${wedDate} ka newspaper abhi upload nahi kiya gaya hai.</p>
+                <div style="margin-top: 30px; padding: 30px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404; border-radius: 8px; text-align: center;">
+                    <h3>Newspaper Not Available</h3>
+                    <p>Maafi chahte hain, <strong>${targetWed}</strong> ka edition abhi uploaded nahi hai.</p>
+                    <hr style="border: 0; border-top: 1px solid #ffeeba;">
+                    <p style="font-weight:bold;">Aap purane editions yahan se select kar sakte hain:</p>
+                    <div style="margin-top:15px;">
+                        ${availableEditions.map(d => `<button onclick="setAndLoad('${d}')" style="margin:5px; padding:8px 15px; cursor:pointer; background:white; border:1px solid #856404; border-radius:4px;">${d}</button>`).join('')}
+                    </div>
                 </div>`;
         }
+    }
+
+    function setAndLoad(date) {
+        document.getElementById('newsDate').value = date;
+        loadPDF();
     }
 
     window.onload = fetchDates;
